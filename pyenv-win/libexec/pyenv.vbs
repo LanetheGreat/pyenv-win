@@ -117,54 +117,54 @@ Sub CommandWhich(arg)
     Dim program
     Dim exts
     Dim ext
-    Dim version
+    Dim versions, ver
 
     program = arg(1)
-    version = objws.Environment("Process")("PYENV_VERSION")
-
     If program = "" Then PrintHelp "pyenv-which", 1
-    If version = "" Then version = GetCurrentVersion()(0)
     If Right(program, 1) = "." Then program = Left(program, Len(program)-1)
 
+    versions = GetCurrentVersions
     Set exts = GetExtensions(True)
 
-    If Not objfs.FolderExists(strDirVers &"\"& version) Then
-        WScript.Echo "pyenv: version `"& version &"' is not installed (set by "& version &")"
-        WScript.Quit 1
-    End If
-
-    If objfs.FileExists(strDirVers &"\"& version &"\"& program) Then
-        WScript.Echo objfs.GetFile(strDirVers &"\"& version &"\"& program).Path
-        WScript.Quit 0
-    End If
-
-    For Each ext In exts.Keys
-        If objfs.FileExists(strDirVers &"\"& version &"\"& program & ext) Then
-            WScript.Echo objfs.GetFile(strDirVers &"\"& version &"\"& program & ext).Path
-            WScript.Quit 0
+    For Each ver In versions(0)
+        If Not objfs.FolderExists(strDirVers &"\"& ver) Then
+            WScript.Echo "pyenv: version `"& ver &"' is not installed (set by "& ver &")"
+            WScript.Quit 1
         End If
-    Next
 
-    If objfs.FolderExists(strDirVers &"\"& version & "\Scripts") Then
-        If objfs.FileExists(strDirVers &"\"& version &"\Scripts\"& program) Then
-            WScript.Echo objfs.GetFile(strDirVers &"\"& version &"\Scripts\"& program).Path
+        If objfs.FileExists(strDirVers &"\"& ver &"\"& program) Then
+            WScript.Echo objfs.GetFile(strDirVers &"\"& ver &"\"& program).Path
             WScript.Quit 0
         End If
 
         For Each ext In exts.Keys
-            If objfs.FileExists(strDirVers &"\"& version &"\Scripts\"& program & ext) Then
-                WScript.Echo objfs.GetFile(strDirVers &"\"& version &"\Scripts\"& program & ext).Path
+            If objfs.FileExists(strDirVers &"\"& ver &"\"& program & ext) Then
+                WScript.Echo objfs.GetFile(strDirVers &"\"& ver &"\"& program & ext).Path
                 WScript.Quit 0
             End If
         Next
-    End If
+
+        If objfs.FolderExists(strDirVers &"\"& ver & "\Scripts") Then
+            If objfs.FileExists(strDirVers &"\"& ver &"\Scripts\"& program) Then
+                WScript.Echo objfs.GetFile(strDirVers &"\"& ver &"\Scripts\"& program).Path
+                WScript.Quit 0
+            End If
+
+            For Each ext In exts.Keys
+                If objfs.FileExists(strDirVers &"\"& ver &"\Scripts\"& program & ext) Then
+                    WScript.Echo objfs.GetFile(strDirVers &"\"& ver &"\Scripts\"& program & ext).Path
+                    WScript.Quit 0
+                End If
+            Next
+        End If
+    Next
     WScript.Echo "pyenv: "& arg(1) &": command not found"
 
-    version = getCommandOutput("cscript //Nologo "& WScript.ScriptFullName &" whence "& program)
-    If Trim(version) <> "" Then
+    ver = getCommandOutput("cscript //Nologo "& WScript.ScriptFullName &" whence "& program)
+    If Trim(ver) <> "" Then
         WScript.Echo
         WScript.Echo "The `"& arg(1) &"' command exists in these Python versions:"
-        WScript.Echo "  "& Replace(version, vbCrLf, vbCrLf &"  ")
+        WScript.Echo "  "& Replace(ver, vbCrLf, vbCrLf &"  ")
     End If
 
     WScript.Quit 127
@@ -331,17 +331,24 @@ Sub CommandGlobal(arg)
         If arg(1) = "--help" Then PrintHelp "pyenv-global", 0
     End If
 
-    Dim ver
+    Dim versions, ver
     If arg.Count < 2 Then
-        ver = GetCurrentVersionGlobal()
-        If IsNull(ver) Then
-            WScript.Echo "no global version configured"
+        versions = GetCurrentVersionsGlobal
+        If IsNull(versions) Then
+            WScript.Echo "no global versions configured"
         Else
-            WScript.Echo ver(0)
+            For Each ver In versions(0)
+                WScript.Echo ver
+            Next
         End If
     Else
-        ver = Check32Bit(arg(1))
-        SetGlobalVersion ver
+        Dim argIndex
+        Set versions = CreateObject("Scripting.Dictionary")
+        For argIndex = 1 To arg.Count-1
+            versions(Check32Bit(arg(argIndex))) = Empty
+        Next
+
+        SetGlobalVersions versions.Keys
     End If
 End Sub
 
@@ -350,32 +357,30 @@ Sub CommandLocal(arg)
         If arg(1) = "--help" Then PrintHelp "pyenv-local", 0
     End If
 
-    Dim ver
+    Dim versions, ver
     If arg.Count < 2 Then
-        ver = GetCurrentVersionLocal(strCurrent)
-        If IsNull(ver) Then
+        versions = GetCurrentVersionsLocal(strCurrent)
+        If IsNull(versions) Then
             WScript.Echo "no local version configured for this directory"
         Else
-            WScript.Echo ver(0)
+            For Each ver In versions(0)
+                WScript.Echo ver
+            Next    
         End If
     Else
         If arg(1) = "--unset" Then
             ver = ""
             objfs.DeleteFile strCurrent & strVerFile, True
             Exit Sub
-        Else
-            ver = Check32Bit(arg(1))
-            GetBinDir(ver)
         End If
 
-        Dim ofile
-        If objfs.FileExists(strCurrent & strVerFile) Then
-            Set ofile = objfs.OpenTextFile(strCurrent & strVerFile, 2)
-        Else
-            Set ofile = objfs.CreateTextFile(strCurrent & strVerFile, True)
-        End If
-        ofile.WriteLine(ver)
-        ofile.Close()
+        Dim argIndex
+        Set versions = CreateObject("Scripting.Dictionary")
+        For argIndex = 1 To arg.Count-1
+            versions(Check32Bit(arg(argIndex))) = Empty
+        Next
+
+        SetLocalVersions versions.Keys, strCurrent & strVerFile
     End If
 End Sub
 
@@ -384,22 +389,25 @@ Sub CommandShell(arg)
         If arg(1) = "--help" Then PrintHelp "pyenv-shell", 0
     End If
 
-    Dim ver
+    Dim versions
     If arg.Count < 2 Then
-        ver = GetCurrentVersionShell
-        If IsNull(ver) Then
+        versions = GetCurrentVersionsShell
+        If IsNull(versions) Then
             WScript.Echo "no shell-specific version configured"
         Else
-            WScript.Echo ver(0)
+            WScript.Echo Join(versions(0), " ")
         End If
     Else
-        If arg(1) = "--unset" Then
-            ver = ""
-        Else
-            ver = Check32Bit(arg(1))
-            GetBinDir(ver)
+        Set versions = CreateObject("Scripting.Dictionary")
+        If arg(1) <> "--unset" Then
+            Dim argIndex, ver
+            For argIndex = 1 To arg.Count-1
+                ver = Check32Bit(arg(argIndex))
+                GetBinDir(ver)
+                versions(ver) = Empty
+            Next
         End If
-        ExecCommand("endlocal"& vbCrLf &"set PYENV_VERSION="& ver)
+        ExecCommand("endlocal"& vbCrLf &"set PYENV_VERSION="& Join(versions.Keys, ";"))
     End If
 End Sub
 
@@ -410,9 +418,11 @@ Sub CommandVersion(arg)
 
     If Not objfs.FolderExists(strDirVers) Then objfs.CreateFolder(strDirVers)
 
-    Dim curVer
-    curVer = GetCurrentVersion
-    WScript.Echo curVer(0) &" (set by "& curVer(1) &")"
+    Dim versions, ver
+    versions = GetCurrentVersions()
+    For Each ver In versions(0)
+        WScript.Echo ver &" (set by "& versions(1) &")"
+    Next
 End Sub
 
 Sub CommandVersionName(arg)
@@ -422,7 +432,7 @@ Sub CommandVersionName(arg)
 
     If Not objfs.FolderExists(strDirVers) Then objfs.CreateFolder(strDirVers)
 
-    WScript.Echo GetCurrentVersion()(0)
+    WScript.Echo Join(GetCurrentVersions()(0), ";")
 End Sub
 
 Sub CommandVersions(arg)
@@ -438,20 +448,25 @@ Sub CommandVersions(arg)
 
     If Not objfs.FolderExists(strDirVers) Then objfs.CreateFolder(strDirVers)
 
-    Dim curVer
-    curVer = GetCurrentVersionNoError
-    If IsNull(curVer) Then
-        curVer = Array("", "")
+    Dim versDict
+    Dim versions, ver
+
+    Set versDict = CreateObject("Scripting.Dictionary")
+    versions = GetCurrentVersionsNoError
+
+    If Not IsNull(versions) Then
+        For Each ver In versions(0)
+            versDict(ver) = versions(1)
+        Next
     End If
 
     Dim dir
-    Dim ver
     For Each dir In objfs.GetFolder(strDirVers).subfolders
         ver = objfs.GetFileName(dir)
         If isBare Then
             WScript.Echo ver
-        ElseIf ver = curVer(0) Then
-            WScript.Echo "* "& ver &" (set by "& curVer(1) &")"
+        ElseIf versDict.Exists(ver) Then
+            WScript.Echo "* "& ver &" (set by "& versDict(ver) &")"
         Else
             WScript.Echo "  "& ver
         End If

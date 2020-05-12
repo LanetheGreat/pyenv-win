@@ -63,8 +63,8 @@ strDirShims  = strPyenvHome & "\shims"
 strDBFile    = strPyenvHome & "\.versions_cache.xml"
 strVerFile   = "\.python-version"
 
-Function GetCurrentVersionGlobal()
-    GetCurrentVersionGlobal = Null
+Function GetCurrentVersionsGlobal()
+    GetCurrentVersionsGlobal = Null
 
     Dim fname
     Dim objFile
@@ -72,14 +72,14 @@ Function GetCurrentVersionGlobal()
     If objfs.FileExists(fname) Then
         Set objFile = objfs.OpenTextFile(fname)
         If objFile.AtEndOfStream <> True Then
-           GetCurrentVersionGlobal = Array(objFile.ReadLine, fname)
+           GetCurrentVersionsGlobal = Array(Split(objFile.ReadLine, ";"), fname)
         End If
         objFile.Close
     End If
 End Function
 
-Function GetCurrentVersionLocal(path)
-    GetCurrentVersionLocal = Null
+Function GetCurrentVersionsLocal(path)
+    GetCurrentVersionsLocal = Null
 
     Dim fname
     Dim objFile
@@ -88,7 +88,7 @@ Function GetCurrentVersionLocal(path)
         If objfs.FileExists(fname) Then
             Set objFile = objfs.OpenTextFile(fname)
             If objFile.AtEndOfStream <> True Then
-               GetCurrentVersionLocal = Array(objFile.ReadLine, fname)
+               GetCurrentVersionsLocal = Array(Split(objFile.ReadLine, ";"), fname)
             End If
             objFile.Close
             Exit Function
@@ -97,34 +97,34 @@ Function GetCurrentVersionLocal(path)
     Loop
 End Function
 
-Function GetCurrentVersionShell()
-    GetCurrentVersionShell = Null
+Function GetCurrentVersionsShell()
+    GetCurrentVersionsShell = Null
 
     Dim str
     str = objws.Environment("Process")("PYENV_VERSION")
     If str <> "" Then _
-        GetCurrentVersionShell = Array(str, "%PYENV_VERSION%")
+        GetCurrentVersionsShell = Array(Split(str, ";"), "%PYENV_VERSION%")
 End Function
 
-Function GetCurrentVersion()
+Function GetCurrentVersions()
     Dim str
-    str = GetCurrentVersionShell
-    If IsNull(str) Then str = GetCurrentVersionLocal(strCurrent)
-    If IsNull(str) Then str = GetCurrentVersionGlobal
+    str = GetCurrentVersionsShell
+    If IsNull(str) Then str = GetCurrentVersionsLocal(strCurrent)
+    If IsNull(str) Then str = GetCurrentVersionsGlobal
     If IsNull(str) Then
 		WScript.echo "No global python version has been set yet. Please set the global version by typing:"
 		WScript.echo "pyenv global 3.7.2"
 		WScript.quit
 	End If
-	GetCurrentVersion = str
+	GetCurrentVersions = str
 End Function
 
-Function GetCurrentVersionNoError()
+Function GetCurrentVersionsNoError()
     Dim str
-    str = GetCurrentVersionShell
-    If IsNull(str) Then str = GetCurrentVersionLocal(strCurrent)
-    If IsNull(str) Then str = GetCurrentVersionGlobal
-    GetCurrentVersionNoError = str
+    str = GetCurrentVersionsShell
+    If IsNull(str) Then str = GetCurrentVersionsLocal(strCurrent)
+    If IsNull(str) Then str = GetCurrentVersionsGlobal
+    GetCurrentVersionsNoError = str
 End Function
 
 Function IsVersion(version)
@@ -145,11 +145,34 @@ Function GetBinDir(ver)
     GetBinDir = str
 End Function
 
-Sub SetGlobalVersion(ver)
-    GetBinDir(ver)
+Sub SetGlobalVersions(versions)
+    Dim ver
+    For Each ver In versions
+        GetBinDir(ver)
+    Next
 
-    With objfs.CreateTextFile(strPyenvHome &"\version" , True)
-        .WriteLine(ver)
+    With objfs.CreateTextFile(strPyenvHome &"\version", True)
+        .WriteLine(Join(versions, ";"))
+        .Close
+    End With
+End Sub
+
+Sub SetLocalVersions(versions, localPath)
+    Dim ofile
+    Dim ver
+
+    For Each ver In versions
+        GetBinDir(ver)
+    Next
+
+    If objfs.FileExists(localPath) Then
+        Set ofile = objfs.OpenTextFile(localPath, 2)
+    Else
+        Set ofile = objfs.CreateTextFile(localPath, True)
+    End If
+
+    With ofile
+        .WriteLine(Join(versions, ";"))
         .Close
     End With
 End Sub
@@ -187,25 +210,36 @@ Function GetExtensionsNoPeriod(addPy)
     Next
 End Function
 
-Sub WriteWinScript(baseName, strDirBin)
-    With objfs.CreateTextFile(strDirShims &"\"& baseName &".bat")
+Sub WriteWinScript(strDirBin, shimName, execName)
+    With objfs.CreateTextFile(strDirShims &"\"& shimName &".bat")
         .WriteLine("@echo off")
         .WriteLine("setlocal")
         .WriteLine("chcp 1250 > NUL")
         .WriteLine("set ""PATH="& strDirBin &"\Scripts;"& strDirBin &";%PATH%""")
-        .WriteLine(baseName &" %*")
+        .WriteLine(execName &" %*")
         .Close
     End With
 End Sub
 
-Sub WriteLinuxScript(baseName, strDirBin)
-    With objfs.CreateTextFile(strDirShims &"\"& baseName)
+Sub WriteLinuxScript(strDirBin, shimName, execName)
+    With objfs.CreateTextFile(strDirShims &"\"& shimName)
         .WriteLine("#!/bin/sh")
         .WriteLine("export PATH="& strDirBin &"/Scripts:"& strDirBin &":$PATH")
-        .WriteLine(baseName &" $*")
+        .WriteLine(execName &" $*")
         .Close
     End With
 End Sub
+
+Function ReverseArray(arr)
+    Dim reverse(), i
+    ReDim reverse(UBound(arr))
+
+    For i = LBound(arr) To UBound(arr)
+        reverse(i) = arr(UBound(arr) - i)
+    Next
+
+    ReverseArray = reverse
+End Function
 
 Sub Rehash()
     Dim file
@@ -215,36 +249,57 @@ Sub Rehash()
         file.Delete True
     Next
 
-    Dim version
+    Dim versions, ver, verMatch
+    Dim verMajor, verMinor
     Dim winBinDir, nixBinDir
     Dim exts
     Dim baseName
-    version = GetCurrentVersionNoError()
-    If IsNull(version) Then Exit Sub
+    Dim appendVer
 
-    winBinDir = strDirVers &"\"& version(0)
-    If Not objfs.FolderExists(winBinDir) Then Exit Sub
+    versions = GetCurrentVersionsNoError()
+    If IsNull(versions) Then Exit Sub
 
-    nixBinDir = "/"& Replace(Replace(winBinDir, ":", ""), "\", "/")
     Set exts = GetExtensionsNoPeriod(True)
 
-    For Each file In objfs.GetFolder(winBinDir).Files
-        If exts.Exists(LCase(objfs.GetExtensionName(file))) Then
-            baseName = objfs.GetBaseName(file)
-            WriteWinScript baseName, winBinDir
-            WriteLinuxScript baseName, nixBinDir
+    For Each ver In ReverseArray(versions(0))
+        Set verMatch = regexVer.Execute(ver)
+        appendVer = (verMatch.Count > 0)
+        If appendVer Then
+            verMajor = verMatch(0).SubMatches(0)
+            verMinor = verMatch(0).SubMatches(1)
         End If
-    Next
 
-    If objfs.FolderExists(winBinDir & "\Scripts") Then
-        For Each file In objfs.GetFolder(winBinDir & "\Scripts").Files
+        winBinDir = strDirVers &"\"& ver
+        If Not objfs.FolderExists(winBinDir) Then Exit Sub
+
+        nixBinDir = "/"& Replace(Replace(winBinDir, ":", ""), "\", "/")
+
+        For Each file In objfs.GetFolder(winBinDir).Files
             If exts.Exists(LCase(objfs.GetExtensionName(file))) Then
                 baseName = objfs.GetBaseName(file)
-                WriteWinScript baseName, winBinDir
-                WriteLinuxScript baseName, nixBinDir
+                WriteWinScript winBinDir, baseName, baseName
+                WriteLinuxScript nixBinDir, baseName, baseName
+
+                If appendVer And (LCase(basename) = "python" Or LCase(basename) = "pythonw") Then
+                    WriteWinScript winBinDir, baseName & verMajor &"."& verMinor, baseName
+                    WriteLinuxScript nixBinDir, baseName & verMajor &"."& verMinor, baseName
+
+                    WriteWinScript winBinDir, baseName & verMajor, baseName
+                    WriteLinuxScript nixBinDir, baseName & verMajor, baseName
+                End If    
             End If
         Next
-    End If
+
+        If objfs.FolderExists(winBinDir & "\Scripts") Then
+            For Each file In objfs.GetFolder(winBinDir & "\Scripts").Files
+                If exts.Exists(LCase(objfs.GetExtensionName(file))) Then
+                    baseName = objfs.GetBaseName(file)
+                    WriteWinScript winBinDir, baseName, baseName
+                    WriteLinuxScript nixBinDir, baseName, baseName
+                End If
+            Next
+        End If
+    Next
 End Sub
 
 ' SYSTEM:PROCESSOR_ARCHITECTURE = AMD64 on 64-bit computers. (even when using 32-bit cmd.exe)

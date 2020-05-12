@@ -120,7 +120,7 @@ Function deepExtract(params)
     End If
 End Function
 
-Sub extract(params)
+Function extract(params)
     Dim installFile
     Dim installFileFolder
     Dim installPath
@@ -137,7 +137,7 @@ Sub extract(params)
     If Not objfs.FolderExists(objfs.GetParentFolderName(installPath)) Then _
         EnsureFolder(objfs.GetParentFolderName(installPath))
 
-    If objfs.FolderExists(installPath) Then Exit Sub
+    If objfs.FolderExists(installPath) Then Exit Function
 
     If Not objfs.FileExists(installFile) Then download(params)
 
@@ -150,11 +150,10 @@ Sub extract(params)
     qInstallFile = """"& installFile &""""
     qInstallPath = """"& installPath &""""
 
-    Dim exitCode
     Dim file
     If params(LV_MSI) Then
-        exitCode = objws.Run("msiexec /quiet /a "& qInstallFile &" TargetDir="& qInstallPath, 9, True)
-        If exitCode = 0 Then
+        extract = objws.Run("msiexec /quiet /a "& qInstallFile &" TargetDir="& qInstallPath, 9, True)
+        If extract = 0 Then
             ' Remove duplicate .msi files from install path.
             For Each file In objfs.GetFolder(installPath).Files
                 If LCase(objfs.GetExtensionName(file)) = "msi" Then objfs.DeleteFile file
@@ -162,23 +161,22 @@ Sub extract(params)
 
             ' If the ensurepip Lib exists, call it manually since "msiexec /a" installs don't do this.
             If objfs.FolderExists(installPath &"\Lib\ensurepip") Then
-                exitCode = objws.Run(""""& installPath &"\python"" -E -s -m ensurepip -U --default-pip", 0, True)
-                If exitCode Then WScript.Echo ":: [Error] :: error installing pip."
+                extract = objws.Run(""""& installPath &"\python"" -E -s -m ensurepip -U --default-pip", 0, True)
+                If extract Then WScript.Echo ":: [Error] :: error installing pip."
             End If
         End If
     ElseIf params(LV_Web) Then
-        exitCode = deepExtract(params)
+        extract = deepExtract(params)
     Else
-        exitCode = objws.Run(qInstallFile & quiet &" InstallAllUsers=0 Include_launcher=0 Include_test=0 SimpleInstall=1 TargetDir="& qInstallPath, 9, True)
+        extract = objws.Run(qInstallFile & quiet &" InstallAllUsers=0 Include_launcher=0 Include_test=0 SimpleInstall=1 TargetDir="& qInstallPath, 9, True)
     End If
 
-    If exitCode = 0 Then
+    If extract = 0 Then
         WScript.Echo ":: [Info] :: completed! "& params(LV_Code)
-        SetGlobalVersion params(LV_Code)
     Else
         WScript.Echo ":: [Error] :: couldn't install .. "& params(LV_Code)
     End If
-End Sub
+End Function
 
 Sub main(arg)
     If arg.Count = 0 Then ShowHelp
@@ -290,9 +288,11 @@ Sub main(arg)
     Else
         If installVersions.Count = 0 Then
             Dim ary
-            ary = GetCurrentVersionNoError()
+            ary = GetCurrentVersionsNoError()
             If Not IsNull(ary) Then
-                installVersions.Item(ary(0)) = Empty
+                For Each version In ary(0)
+                    installVersions.Item(version) = Empty
+                Next
             Else
                 ShowHelp
             End If    
@@ -311,8 +311,9 @@ Sub main(arg)
 
     Dim verDef
     Dim installParams
-    Dim installed
+    Dim installed, successful
     Set installed = CreateObject("Scripting.Dictionary")
+    Set successful = CreateObject("Scripting.Dictionary")
 
     For Each version In installVersions.Keys
         If Not installed.Exists(version) Then
@@ -329,10 +330,13 @@ Sub main(arg)
                 optQuiet _
             )
             If optForce Then clear(installParams)
-            extract(installParams)
+            If extract(installParams) = 0 Then successful(version) = Empty
             installed(version) = Empty
+        Else
+            successful(version) = Empty
         End If
     Next
+    If successful.Count > 0 Then SetGlobalVersions successful.Keys
     Rehash
 End Sub
 
