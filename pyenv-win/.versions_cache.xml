@@ -581,6 +581,26 @@
 		<URL>https://www.python.org/ftp/python/2.7.17/python-2.7.17.amd64.msi</URL>
 	</version>
 	<version x64="false" webInstall="false" msi="true">
+		<code>2.7.18rc1-win32</code>
+		<file>python-2.7.18rc1.msi</file>
+		<URL>https://www.python.org/ftp/python/2.7.18/python-2.7.18rc1.msi</URL>
+	</version>
+	<version x64="true" webInstall="false" msi="true">
+		<code>2.7.18rc1</code>
+		<file>python-2.7.18rc1.amd64.msi</file>
+		<URL>https://www.python.org/ftp/python/2.7.18/python-2.7.18rc1.amd64.msi</URL>
+	</version>
+	<version x64="false" webInstall="false" msi="true">
+		<code>2.7.18-win32</code>
+		<file>python-2.7.18.msi</file>
+		<URL>https://www.python.org/ftp/python/2.7.18/python-2.7.18.msi</URL>
+	</version>
+	<version x64="true" webInstall="false" msi="true">
+		<code>2.7.18</code>
+		<file>python-2.7.18.amd64.msi</file>
+		<URL>https://www.python.org/ftp/python/2.7.18/python-2.7.18.amd64.msi</URL>
+	</version>
+	<version x64="false" webInstall="false" msi="true">
 		<code>3.0a1-win32</code>
 		<file>python-3.0a1.msi</file>
 		<URL>https://www.python.org/ftp/python/3.0/python-3.0a1.msi</URL>
@@ -2056,6 +2076,16 @@
 		<URL>https://www.python.org/ftp/python/3.8.2/python-3.8.2-amd64-webinstall.exe</URL>
 	</version>
 	<version x64="false" webInstall="true" msi="false">
+		<code>3.8.3rc1-win32</code>
+		<file>python-3.8.3rc1-webinstall.exe</file>
+		<URL>https://www.python.org/ftp/python/3.8.3/python-3.8.3rc1-webinstall.exe</URL>
+	</version>
+	<version x64="true" webInstall="true" msi="false">
+		<code>3.8.3rc1</code>
+		<file>python-3.8.3rc1-amd64-webinstall.exe</file>
+		<URL>https://www.python.org/ftp/python/3.8.3/python-3.8.3rc1-amd64-webinstall.exe</URL>
+	</version>
+	<version x64="false" webInstall="true" msi="false">
 		<code>3.9.0a1-win32</code>
 		<file>python-3.9.0a1-webinstall.exe</file>
 		<URL>https://www.python.org/ftp/python/3.9.0/python-3.9.0a1-webinstall.exe</URL>
@@ -2094,5 +2124,25 @@
 		<code>3.9.0a4</code>
 		<file>python-3.9.0a4-amd64-webinstall.exe</file>
 		<URL>https://www.python.org/ftp/python/3.9.0/python-3.9.0a4-amd64-webinstall.exe</URL>
+	</version>
+	<version x64="false" webInstall="true" msi="false">
+		<code>3.9.0a5-win32</code>
+		<file>python-3.9.0a5-webinstall.exe</file>
+		<URL>https://www.python.org/ftp/python/3.9.0/python-3.9.0a5-webinstall.exe</URL>
+	</version>
+	<version x64="true" webInstall="true" msi="false">
+		<code>3.9.0a5</code>
+		<file>python-3.9.0a5-amd64-webinstall.exe</file>
+		<URL>https://www.python.org/ftp/python/3.9.0/python-3.9.0a5-amd64-webinstall.exe</URL>
+	</version>
+	<version x64="false" webInstall="true" msi="false">
+		<code>3.9.0a6-win32</code>
+		<file>python-3.9.0a6-webinstall.exe</file>
+		<URL>https://www.python.org/ftp/python/3.9.0/python-3.9.0a6-webinstall.exe</URL>
+	</version>
+	<version x64="true" webInstall="true" msi="false">
+		<code>3.9.0a6</code>
+		<file>python-3.9.0a6-amd64-webinstall.exe</file>
+		<URL>https://www.python.org/ftp/python/3.9.0/python-3.9.0a6-amd64-webinstall.exe</URL>
 	</version>
 </versions>
