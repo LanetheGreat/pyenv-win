@@ -1,6 +1,6 @@
 Option Explicit
 
-' Make sure to Import "pyenv-lib.vbs" before this file in a command. (for objfs/objweb variables)
+' Make sure to Import "pyenv-lib.vbs" before this file in a command. (for objfs/objweb variables, regular expressions)
 
 Dim mirror
 mirror = objws.Environment("Process")("PYTHON_BUILD_MIRROR_URL")
@@ -31,21 +31,6 @@ Const LV_MSI = 5
 Const IP_InstallPath = 6
 Const IP_InstallFile = 7
 Const IP_Quiet = 8
-
-Dim regexVer
-Dim regexFile
-Set regexVer = New RegExp
-Set regexFile = New RegExp
-With regexVer
-    .Pattern = "^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:([a-z]+)(\d*))?$"
-    .Global = True
-    .IgnoreCase = True
-End With
-With regexFile
-    .Pattern = "^python-(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:([a-z]+)(\d*))?([\.-]amd64)?(-webinstall)?\.(exe|msi)$"
-    .Global = True
-    .IgnoreCase = True
-End With
 
 Function JoinWin32String(pieces)
     JoinWin32String = ""

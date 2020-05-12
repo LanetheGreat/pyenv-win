@@ -28,6 +28,22 @@ Sub SetProxy()
 End Sub
 SetProxy
 
+' Regular expressions for extracting python version numbers.
+Dim regexVer
+Dim regexFile
+Set regexVer = New RegExp
+Set regexFile = New RegExp
+With regexVer
+    .Pattern = "^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:([a-z]+)(\d*))?$"
+    .Global = True
+    .IgnoreCase = True
+End With
+With regexFile
+    .Pattern = "^python-(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:([a-z]+)(\d*))?([\.-]amd64)?(-webinstall)?\.(exe|msi)$"
+    .Global = True
+    .IgnoreCase = True
+End With
+
 Dim strCurrent
 Dim strPyenvHome
 Dim strPyenvParent
