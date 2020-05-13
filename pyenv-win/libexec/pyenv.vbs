@@ -350,6 +350,7 @@ Sub CommandGlobal(arg)
         Next
 
         SetGlobalVersions versions.Keys
+        Rehash
     End If
 End Sub
 
@@ -381,6 +382,7 @@ Sub CommandLocal(arg)
         Next
 
         SetLocalVersions versions.Keys, strCurrent & strVerFile
+        Rehash
     End If
 End Sub
 
