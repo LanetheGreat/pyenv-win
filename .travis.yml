@@ -2,7 +2,7 @@ language: shell
 os: windows
 before_install:
   - export PYENV="$TRAVIS_BUILD_DIR/pyenv-win"
-  - export PATH="$PYENV/bin:$PYENV/shims:$PATH"
+  - export PATH="$PYENV/bin:$PYENV/win-shims:$PYENV/nix-shims:$PATH"
 install:
     - pyenv --version
     - pyenv update

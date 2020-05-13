@@ -276,7 +276,7 @@ Sub ShowHelp()
      WScript.Echo "   version-name Show the current Python version(s)"
      WScript.Echo "   versions     List all Python versions available to pyenv"
      WScript.Echo "   exec         Runs an executable by first preparing PATH so that the "
-     WScript.Echo "                  selected Python version executes first."
+     WScript.Echo "                  selected Python version executes first"
      WScript.Echo "   which        Display the full path to an executable"
      WScript.Echo "   whence       List all Python versions that contain the given executable"
      WScript.Echo ""

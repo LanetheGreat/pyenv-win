@@ -41,17 +41,19 @@ I found a similar system for [rbenv-win][3] for ruby developers. This project wa
 
 ```yml
    commands     List all available pyenv commands
-   local        Set or show the local application-specific Python version
-   global       Set or show the global Python version
-   shell        Set or show the shell-specific Python version
-   install      Install 1 or more versions of Python 
-   uninstall    Uninstall 1 or more versions of Python
+   duplicate    Creates a duplicate python environment
+   local        Set or show the local application-specific Python versions
+   global       Set or show the global Python versions
+   shell        Set or show the shell-specific Python versions
+   install      Install one or more Python versions
+   uninstall    Uninstall one or more Python versions
    update       Update the cached version DB
-   rehash       Rehash pyenv shims (run this after switching Python versions)
-   version      Show the current Python version and its origin
-   version-name Show the current Python version
+   rehash       Rehash pyenv shims (run this after installing libraries with pip)
+   version      Show the current Python version(s) and their origin
+   version-name Show the current Python version(s)
    versions     List all Python versions available to pyenv
-   exec         Runs an executable by first preparing PATH so that the selected Python
+   exec         Runs an executable by first preparing PATH so that the 
+                  selected Python version executes first
    which        Display the full path to an executable
    whence       List all Python versions that contain the given executable
 ```
@@ -77,16 +79,20 @@ Get pyenv-win via one of the following methods:
 ### Finish the installation
 
    1. If you installed using Chocolatey, you can skip to step 3.
-      Otherwise, add a new *System* variable in ENVIRONMENT with name:  
-      `PYENV` value: `%USERPROFILE%\.pyenv\pyenv-win`
-   2. Now add the following paths to your *System* ENVIRONMENT PATH variable in order to access the pyenv command (don't forget to separate with semicolons):  
+      Otherwise, add a new *User* variable in ENVIRONMENT with name:  
+      `PYENV` value: `C:\Users\[username]\.pyenv\pyenv-win`
+   2. Now add the following paths to your *User* ENVIRONMENT PATH variable in order to access the pyenv command (don't forget to separate with semicolons, and use this exact order for the shim folders):
       - `%PYENV%\bin`
-      - `%PYENV%\shims`
+      - `%PYENV%\win-shims`
+      - `%PYENV%\nix-shims`
       
       This can be done through GUI or command line:
       - __This PC → Properties → Advanced system settings → Advanced → Environment Variables... → PATH__
       - _Be careful! People who use Windows newer than May 2019 Update must put these items above `%USERPROFILE%\AppData\Local\Microsoft\WindowsApps`; See [this article](https://devblogs.microsoft.com/python/python-in-the-windows-10-may-2019-update/)._
-      - Powershell: `[System.Environment]::SetEnvironmentVariable('path', "$env:HOME\.pyenv\pyenv-win\bin;$env:HOME\.pyenv\pyenv-win\shims;" + $env:Path, [System.EnvironmentVariableTarget]::User)`
+      - Powershell:
+        - `[System.Environment]::SetEnvironmentVariable('PYENV', "$env:HOME\.pyenv\pyenv-win", [System.EnvironmentVariableTarget]::User)`
+        - `$UserPath = [System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::User).Trim(";")`
+        - `[System.Environment]::SetEnvironmentVariable('PATH', [String]::Concat($UserPath, ";%PYENV%\bin;%PYENV%\win-shims;%PYENV%\nix-shims").Trim(";"), [System.EnvironmentVariableTarget]::User)`
    
    3. Verify the installation was successful by opening a new terminal and running `pyenv --version`
    4. Now run the `pyenv rehash` from home directory
@@ -147,6 +153,23 @@ Get pyenv-win via one of the following methods:
    - **Answer:** According to Windows when adding the path under the User or System variables, for the User variable you need to logout and login again to reflect the changes. For System variable it's not required.
 
 ## Change Log
+
+### New in 1.4.0
+- Added basic support for using multiple instances of python after a rehash via "version specific" shims (for compatability with libraries like tox that expect them). For example, `pyenv global 3.6.8 3.7.7 3.8.2 3.5.4 2.7.17 2.6.6` would make the following Python commands available and execute these specific versions when called:
+   - python    (3.6.8)
+   - python2   (2.7.17)
+   - python2.6 (2.6.6)
+   - python2.7 (2.7.17)
+   - python3   (3.6.8)
+   - python3.5 (3.5.4)
+   - python3.6 (3.6.8)
+   - python3.7 (3.7.7)
+   - python3.8 (3.8.2)
+   - **\*Note\*: The shims are setup by order of first occurring version in the `pyenv global/local/shell` command.**
+- Split the `pyenv-win\shims` folder into their respective sub-shell folders (`pyenv-win\nix-shims` and `pyenv-win\win-shims`) to support calling the new "version specific" shims for python directly in Command Prompt.
+   - Otherwise you'd have to append `.bat` to each call for a specific python version when using Command Prompt. (`python3.7.bat -m timeit` instead of `python3.7 -m timeit`)
+   - **\*WARNING\*: This change is backwards incompatible with v1.3.0 and will require you to redo your environment variable setup (you should delete `pyenv-win\shims` and update your %PATH% variable).**
+- `pyenv rehash` is automatically performed when calling `pyenv global/local` now, you don't have to use `pyenv global [version] && pyenv rehash` anymore.
 
 ### New in 1.3.0
 - Version naming conventions have now changed from using 64-bit suffixes when specifying a version to (un)install. Now all you need to use is the version number to install your platform's specifc bit version.
