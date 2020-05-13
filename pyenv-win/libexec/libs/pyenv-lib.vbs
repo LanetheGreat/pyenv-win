@@ -50,7 +50,8 @@ Dim strPyenvParent
 Dim strDirCache
 Dim strDirVers
 Dim strDirLibs
-Dim strDirShims
+Dim strDirNixShims
+Dim strDirWinShims
 Dim strDBFile
 Dim strVerFile
 strCurrent   = objfs.GetAbsolutePathName(".")
@@ -59,7 +60,8 @@ strPyenvParent = objfs.getParentFolderName(strPyenvHome)
 strDirCache  = strPyenvHome & "\install_cache"
 strDirVers   = strPyenvHome & "\versions"
 strDirLibs   = strPyenvHome & "\libexec"
-strDirShims  = strPyenvHome & "\shims"
+strDirNixShims  = strPyenvHome & "\nix-shims"
+strDirWinShims  = strPyenvHome & "\win-shims"
 strDBFile    = strPyenvHome & "\.versions_cache.xml"
 strVerFile   = "\.python-version"
 
@@ -211,7 +213,7 @@ Function GetExtensionsNoPeriod(addPy)
 End Function
 
 Sub WriteWinScript(strDirBin, shimName, execName)
-    With objfs.CreateTextFile(strDirShims &"\"& shimName &".bat")
+    With objfs.CreateTextFile(strDirWinShims &"\"& shimName &".bat")
         .WriteLine("@echo off")
         .WriteLine("setlocal")
         .WriteLine("chcp 1250 > NUL")
@@ -222,7 +224,7 @@ Sub WriteWinScript(strDirBin, shimName, execName)
 End Sub
 
 Sub WriteLinuxScript(strDirBin, shimName, execName)
-    With objfs.CreateTextFile(strDirShims &"\"& shimName)
+    With objfs.CreateTextFile(strDirNixShims &"\"& shimName)
         .WriteLine("#!/bin/sh")
         .WriteLine("export PATH="& strDirBin &"/Scripts:"& strDirBin &":$PATH")
         .WriteLine(execName &" $*")
@@ -244,8 +246,12 @@ End Function
 Sub Rehash()
     Dim file
 
-    If Not objfs.FolderExists(strDirShims) Then objfs.CreateFolder(strDirShims)
-    For Each file In objfs.GetFolder(strDirShims).Files
+    If Not objfs.FolderExists(strDirNixShims) Then objfs.CreateFolder(strDirNixShims)
+    If Not objfs.FolderExists(strDirWinShims) Then objfs.CreateFolder(strDirWinShims)
+    For Each file In objfs.GetFolder(strDirNixShims).Files
+        file.Delete True
+    Next
+    For Each file In objfs.GetFolder(strDirWinShims).Files
         file.Delete True
     Next
 

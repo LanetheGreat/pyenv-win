@@ -104,7 +104,8 @@ venv.bak/
 .mypy_cache/
 .tags
 install_cache/
-shims/
+nix-shims/
+win-shims/
 version
 versions/
 exec.bat
